@@ -26,7 +26,19 @@ def add_to_cache(command):
     save_cache()
 
 async def handler(websocket):
-    logging.info(f"Client connected: {websocket.remote_address}")
+    try:
+        if hasattr(websocket, 'remote_address') and websocket.remote_address:
+            client_ip = websocket.remote_address[0] if isinstance(websocket.remote_address, tuple) else str(websocket.remote_address)
+        else:
+            client_ip = "Unknown"
+    except Exception:
+        client_ip = "Unknown"
+        
+    print(f"\n==================================================")
+    print(f"[SUCCESS] NEW CONNECTION ESTABLISHED: {client_ip}")
+    print(f"==================================================\n")
+    logging.info(f"Client connected: {client_ip}")
+    
     try:
         async for message in websocket:
             logging.info(f"Received: {message}")
