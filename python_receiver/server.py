@@ -3,7 +3,6 @@ import websockets
 import json
 import os
 import logging
-import time
 
 logging.basicConfig(level=logging.INFO)
 
@@ -30,7 +29,7 @@ def add_to_cache(command):
 async def status_reporter():
     while True:
         if connected_clients == 0:
-            print(f"[STATUS] Server is online and listening on port 8765... (0 devices connected)")
+            print(f"[STATUS] Server is available and waiting for connections... (0 connected)", flush=True)
         await asyncio.sleep(5)
 
 async def handler(websocket):
@@ -45,9 +44,9 @@ async def handler(websocket):
     except Exception:
         client_ip = "Unknown"
         
-    print(f"\n==================================================")
-    print(f"[SUCCESS] NEW CONNECTION ESTABLISHED: {client_ip}")
-    print(f"==================================================\n")
+    print(f"\n==================================================", flush=True)
+    print(f"[SUCCESS] NEW CONNECTION ESTABLISHED: {client_ip}", flush=True)
+    print(f"==================================================\n", flush=True)
     logging.info(f"Client connected: {client_ip}")
     
     try:
@@ -55,28 +54,28 @@ async def handler(websocket):
             try:
                 data = json.loads(message)
                 
-                print(f"\n[>>>] INCOMING COMMAND FROM {client_ip}")
-                print(json.dumps(data, indent=2))
-                print(f"[+] Command successfully saved to {CACHE_FILE}")
-                print(f"--------------------------------------------------")
+                print(f"\n[>>>] INCOMING COMMAND FROM {client_ip}", flush=True)
+                print(json.dumps(data, indent=2), flush=True)
+                print(f"[+] Command successfully saved to {CACHE_FILE}", flush=True)
+                print(f"--------------------------------------------------", flush=True)
                 
                 add_to_cache(data)
                 # Auto-reply with acknowledgment
                 await websocket.send(json.dumps({"status": "ack"}))
             except json.JSONDecodeError:
-                print(f"\n[!] INVALID JSON RECEIVED: {message}\n")
+                print(f"\n[!] INVALID JSON RECEIVED: {message}\n", flush=True)
                 logging.error("Invalid JSON received")
     except websockets.ConnectionClosed:
         pass
     finally:
         connected_clients -= 1
-        print(f"\n[-] CONNECTION CLOSED: {client_ip}\n")
+        print(f"\n[-] CONNECTION CLOSED: {client_ip}\n", flush=True)
         logging.info("Client disconnected")
 
 async def main():
-    print("\n" + "*"*50)
-    print("      ROBOTIC CONTROLLER - SERVER STARTED       ")
-    print("*"*50 + "\n")
+    print("\n" + "*"*50, flush=True)
+    print("      ROBOTIC CONTROLLER - SERVER STARTED       ", flush=True)
+    print("*"*50 + "\n", flush=True)
     
     # Start the background reporter
     asyncio.create_task(status_reporter())
