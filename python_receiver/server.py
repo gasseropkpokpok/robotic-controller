@@ -41,15 +41,21 @@ async def handler(websocket):
     
     try:
         async for message in websocket:
-            logging.info(f"Received: {message}")
             try:
                 data = json.loads(message)
+                
+                print(f"\n[>>>] INCOMING COMMAND FROM {client_ip}")
+                print(json.dumps(data, indent=2))
+                print(f"--------------------------------------------------")
+                
                 add_to_cache(data)
                 # Auto-reply with acknowledgment
                 await websocket.send(json.dumps({"status": "ack"}))
             except json.JSONDecodeError:
+                print(f"\n[!] INVALID JSON RECEIVED: {message}\n")
                 logging.error("Invalid JSON received")
     except websockets.ConnectionClosed:
+        print(f"\n[-] CONNECTION CLOSED: {client_ip}\n")
         logging.info("Client disconnected")
 
 async def main():
