@@ -34,6 +34,8 @@ jobs:
           echo "Before sed:"
           grep "android:label" android/app/src/main/AndroidManifest.xml || true
           sed -i 's/android:label="[^"]*"/android:label="First team"/g' android/app/src/main/AndroidManifest.xml
+          sed -i '/<application/a \        android:usesCleartextTraffic="true"' android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
           echo "After sed:"
           grep "android:label" android/app/src/main/AndroidManifest.xml || true
           flutter build apk --release

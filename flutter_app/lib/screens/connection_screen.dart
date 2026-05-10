@@ -189,9 +189,9 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                           height: 50,
                           child: ElevatedButton(
                             onPressed: () {
-                              if (_ipController.text.isNotEmpty) {
+                              if (_ipController.text.trim().isNotEmpty) {
                                 context.read<AppState>().connect(
-                                  _ipController.text,
+                                  _ipController.text.trim(),
                                   _selectedDevice,
                                 );
                                 Navigator.pop(context);
