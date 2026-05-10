@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'core/theme.dart';
 import 'state/app_state.dart';
-import 'screens/connection_screen.dart';
 import 'screens/control_screen.dart';
 
 void main() {
@@ -30,11 +29,7 @@ class RoboticApp extends StatelessWidget {
       title: 'Robotic Controller',
       theme: AppTheme.darkRedTheme,
       debugShowCheckedModeBanner: false,
-      home: Consumer<AppState>(
-        builder: (context, state, child) {
-          return state.isConnected ? const ControlScreen() : const ConnectionScreen();
-        },
-      ),
+      home: const ControlScreen(),
     );
   }
 }
