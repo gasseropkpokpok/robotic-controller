@@ -1,0 +1,16 @@
+name: robotic_controller
+description: A futuristic robotic controller application.
+version: 1.0.0+1
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  web_socket_channel: ^2.4.0
+  shared_preferences: ^2.2.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true
