@@ -30,6 +30,8 @@ jobs:
           flutter config --enable-android
           flutter create --platforms=android .
           flutter pub get
+          dart run flutter_launcher_icons
+          sed -i 's/android:label="robotic_controller"/android:label="First team"/g' android/app/src/main/AndroidManifest.xml
           flutter build apk --release
 
       - name: Upload APK Artifact
