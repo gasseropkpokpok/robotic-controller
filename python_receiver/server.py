@@ -4,7 +4,8 @@ import json
 import os
 import logging
 import socket
-from zeroconf import IPVersion, ServiceInfo, Zeroconf
+from zeroconf import IPVersion, ServiceInfo
+from zeroconf.asyncio import AsyncZeroconf
 
 logging.basicConfig(level=logging.INFO)
 
@@ -77,7 +78,6 @@ async def handler(websocket):
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # doesn't even have to be reachable
         s.connect(('10.255.255.255', 1))
         IP = s.getsockname()[0]
     except Exception:
@@ -91,7 +91,7 @@ async def main():
     print("      ROBOTIC CONTROLLER - SERVER STARTED       ", flush=True)
     print("*"*50 + "\n", flush=True)
     
-    # mDNS Registration
+    # mDNS Registration using AsyncZeroconf (works inside asyncio.run)
     local_ip = get_local_ip()
     port = 8765
     desc = {'version': '1.0.0'}
@@ -105,21 +105,22 @@ async def main():
         server="robotic-server.local.",
     )
 
-    zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
+    aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
     print(f"[mDNS] Registering service robotic-controller on {local_ip}:{port}...", flush=True)
-    zeroconf.register_service(info)
+    await aiozc.async_register_service(info)
+    print(f"[mDNS] Service registered! Phone should discover this server automatically.", flush=True)
 
     # Start the background reporter
     asyncio.create_task(status_reporter())
     
     try:
-        async with websockets.serve(handler, "0.0.0.0", 8765):
+        async with websockets.serve(handler, "0.0.0.0", port):
             logging.info(f"Server bound to ws://0.0.0.0:{port}")
             await asyncio.Future()  # run forever
     finally:
         print(f"[mDNS] Unregistering service...", flush=True)
-        zeroconf.unregister_service(info)
-        zeroconf.close()
+        await aiozc.async_unregister_service(info)
+        await aiozc.async_close()
 
 if __name__ == "__main__":
     asyncio.run(main())
