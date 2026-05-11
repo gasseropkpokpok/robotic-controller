@@ -17,8 +17,8 @@ class RoboticSlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(2), // Minimal margin
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 2), // Very tight padding
+      margin: const EdgeInsets.all(1), // Absolute minimum margin
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 0), // Tightened padding
       decoration: BoxDecoration(
         color: const Color(0xFF0A0000),
         borderRadius: BorderRadius.circular(6),
