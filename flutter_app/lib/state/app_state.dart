@@ -9,6 +9,15 @@ class AppState extends ChangeNotifier {
   String _targetIp = '';
   String _deviceType = 'Unknown';
 
+  // Slider state lives here so all sliders share the same snapshot
+  final Map<String, int> sliderValues = {
+    'J1': 0,
+    'J2': 0,
+    'J3': 0,
+    'J4': 0,
+    'J5': 0,
+  };
+
   bool get isConnected => _isConnected;
   String get targetIp => _targetIp;
   String get deviceType => _deviceType;
@@ -32,7 +41,6 @@ class AppState extends ChangeNotifier {
     _deviceType = type;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('last_ip', ip);
-    
     await _commService.connect(ip);
   }
 
@@ -40,18 +48,17 @@ class AppState extends ChangeNotifier {
     _commService.disconnect();
   }
 
-  void sendSliderValue(int id, int value) {
-    _commService.sendSliderValue(id, value);
+  /// Update one joint and immediately broadcast all values
+  void updateSlider(String joint, int value) {
+    sliderValues[joint] = value;
+    notifyListeners();
+    _commService.sendAllSliders(Map.from(sliderValues));
   }
 
   void sendCommand(String command) {
     _commService.sendCommand(command);
   }
 
-  void sendText(String text) {
-    _commService.sendText(text);
-  }
-  
   @override
   void dispose() {
     _commService.dispose();

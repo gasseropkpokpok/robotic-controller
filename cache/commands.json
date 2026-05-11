@@ -1,1 +1,1 @@
-[{"type": "text", "data": "hello_world"}]
+[{"type": "command", "value": "set"}, {"type": "command", "value": "user one"}]

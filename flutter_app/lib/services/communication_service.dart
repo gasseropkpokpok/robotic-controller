@@ -13,13 +13,10 @@ class CommunicationService {
       final wsUrl = Uri.parse('ws://$ip:8765');
       _channel = WebSocketChannel.connect(wsUrl);
       
-      // Assume connected if we can listen to the stream
       _connectionStatusController.add(true);
 
       _channel!.stream.listen(
-        (message) {
-          // Can handle incoming data from ESP32/PC here
-        },
+        (message) {},
         onDone: () {
           _connectionStatusController.add(false);
         },
@@ -37,36 +34,24 @@ class CommunicationService {
     _connectionStatusController.add(false);
   }
 
-  void _sendJson(Map<String, dynamic> data) {
+  void _sendRaw(String data) {
     if (_channel != null) {
       try {
-        _channel!.sink.add(jsonEncode(data));
+        _channel!.sink.add(data);
       } catch (e) {
         // Silently ignore send errors
       }
     }
   }
 
-  void sendSliderValue(int id, int value) {
-    _sendJson({
-      'type': 'slider',
-      'id': id,
-      'value': value,
-    });
+  /// Send all slider values as a flat map: {"J1": 45, "J2": -30, ...}
+  void sendAllSliders(Map<String, int> values) {
+    _sendRaw(jsonEncode(values));
   }
 
+  /// Send a simple command string: "set", "user one", etc.
   void sendCommand(String command) {
-    _sendJson({
-      'type': 'command',
-      'value': command,
-    });
-  }
-
-  void sendText(String text) {
-    _sendJson({
-      'type': 'text',
-      'value': text,
-    });
+    _sendRaw(command);
   }
 
   void dispose() {

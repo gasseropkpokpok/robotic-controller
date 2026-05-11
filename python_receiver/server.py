@@ -56,18 +56,17 @@ async def handler(websocket):
         async for message in websocket:
             try:
                 data = json.loads(message)
-                
-                print(f"\n[>>>] INCOMING COMMAND FROM {client_ip}", flush=True)
-                print(json.dumps(data, indent=2), flush=True)
-                print(f"[+] Command successfully saved to {CACHE_FILE}", flush=True)
-                print(f"--------------------------------------------------", flush=True)
-                
-                add_to_cache(data)
-                # Auto-reply with acknowledgment
-                await websocket.send(json.dumps({"status": "ack"}))
+                # Flat slider map: {"J1": 45, "J2": -30, ...}
+                readable = "  ".join(f"{k}={v}°" for k, v in data.items())
+                print(f"[JOINTS] {readable}", flush=True)
+                add_to_cache({"type": "joints", "values": data})
+                await websocket.send("ack")
             except json.JSONDecodeError:
-                print(f"\n[!] INVALID JSON RECEIVED: {message}\n", flush=True)
-                logging.error("Invalid JSON received")
+                # Plain text command: "set", "user one", etc.
+                cmd = message.strip()
+                print(f"[CMD]    {cmd}", flush=True)
+                add_to_cache({"type": "command", "value": cmd})
+                await websocket.send("ack")
     except websockets.ConnectionClosed:
         pass
     finally:
