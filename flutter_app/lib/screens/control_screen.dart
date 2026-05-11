@@ -32,19 +32,19 @@ class _ControlScreenState extends State<ControlScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        toolbarHeight: 50,
+        toolbarHeight: 40, // Shorter AppBar
         title: Row(
           children: [
             _ConnectionStatusIndicator(isConnected: appState.isConnected),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 appState.isConnected
                     ? 'UPLINK: ${appState.deviceType.toUpperCase()} [${appState.targetIp}]'
-                    : 'OFFLINE - NO UPLINK',
+                    : 'OFFLINE',
                 style: const TextStyle(
-                  fontSize: 11,
-                  letterSpacing: 1,
+                  fontSize: 10,
+                  letterSpacing: 0.8,
                   fontFamily: 'Courier',
                   fontWeight: FontWeight.bold,
                   overflow: TextOverflow.ellipsis,
@@ -58,7 +58,7 @@ class _ControlScreenState extends State<ControlScreen> {
             icon: Icon(
               appState.isConnected ? Icons.settings_ethernet : Icons.wifi,
               color: Colors.redAccent,
-              size: 20,
+              size: 18,
             ),
             onPressed: () {
               Navigator.push(
@@ -72,18 +72,19 @@ class _ControlScreenState extends State<ControlScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Scrollable Content Area for Sliders
+            // Compact Slider Area
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                physics: const ClampingScrollPhysics(), // Snappier scrolling if needed
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Column(
                   children: [
-                    // Grid for first 4 sliders (2x2)
+                    // Grid for first 4 sliders - flatter aspect ratio
                     GridView.count(
                       crossAxisCount: 2,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      childAspectRatio: 1.6, // Adjust based on phone width
+                      childAspectRatio: 2.2, // Much flatter to save vertical space
                       children: List.generate(4, (index) {
                         final joint = _joints[index];
                         return RoboticSlider(
@@ -94,78 +95,80 @@ class _ControlScreenState extends State<ControlScreen> {
                         );
                       }),
                     ),
-                    // 5th slider (Full width below)
+                    // 5th slider
                     RoboticSlider(
                       id: 5,
                       label: _labels[4],
                       value: appState.sliderValues[_joints[4]]!.toDouble(),
                       onChanged: (v) => appState.updateSlider(_joints[4], v.round()),
                     ),
-                    const SizedBox(height: 10),
                   ],
                 ),
               ),
             ),
             
-            // Fixed Bottom Command Bar
+            // Ultra-Compact Bottom Command Bar
             Container(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                border: Border(top: BorderSide(color: Colors.redAccent.withOpacity(0.2))),
+                border: Border(top: BorderSide(color: Colors.redAccent.withOpacity(0.15))),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Text input row
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: _textController,
-                          style: const TextStyle(fontFamily: 'Courier', fontSize: 13),
-                          decoration: const InputDecoration(
-                            hintText: 'COMMAND...',
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                        child: SizedBox(
+                          height: 36, // Fixed height for input
+                          child: TextField(
+                            controller: _textController,
+                            style: const TextStyle(fontFamily: 'Courier', fontSize: 12),
+                            decoration: const InputDecoration(
+                              hintText: 'CMD...',
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                            ),
+                            onSubmitted: (v) {
+                              if (v.isNotEmpty) {
+                                appState.sendCommand(v.trim());
+                                _textController.clear();
+                              }
+                            },
                           ),
-                          onSubmitted: (v) {
-                            if (v.isNotEmpty) {
-                              appState.sendCommand(v.trim());
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 40,
+                        height: 36,
+                        child: IconButton.filled(
+                          onPressed: () {
+                            if (_textController.text.isNotEmpty) {
+                              appState.sendCommand(_textController.text.trim());
                               _textController.clear();
                             }
                           },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filled(
-                        onPressed: () {
-                          if (_textController.text.isNotEmpty) {
-                            appState.sendCommand(_textController.text.trim());
-                            _textController.clear();
-                          }
-                        },
-                        icon: const Icon(Icons.send, size: 20),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          padding: const EdgeInsets.all(8),
+                          icon: const Icon(Icons.send, size: 16),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            padding: EdgeInsets.zero,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  // Quick Action Buttons
+                  const SizedBox(height: 6),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _QuickButton(
+                      _CompactQuickButton(
                         label: 'SET',
-                        icon: Icons.check_circle_outline,
                         onPressed: () => appState.sendCommand('set'),
                       ),
-                      _QuickButton(
+                      const SizedBox(width: 6),
+                      _CompactQuickButton(
                         label: 'USER ONE',
-                        icon: Icons.person_outline,
                         onPressed: () => appState.sendCommand('user one'),
                       ),
                     ],
@@ -187,48 +190,36 @@ class _ConnectionStatusIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 10,
-      height: 10,
+      width: 8,
+      height: 8,
       decoration: BoxDecoration(
         color: isConnected ? Colors.greenAccent : Colors.red,
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: isConnected ? Colors.greenAccent : Colors.red,
-            blurRadius: 6,
-            spreadRadius: 1,
-          ),
-        ],
       ),
     );
   }
 }
 
-class _QuickButton extends StatelessWidget {
+class _CompactQuickButton extends StatelessWidget {
   final String label;
-  final IconData icon;
   final VoidCallback onPressed;
 
-  const _QuickButton({
+  const _CompactQuickButton({
     required this.label,
-    required this.icon,
     required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: ElevatedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon, size: 14),
-          label: Text(label, style: const TextStyle(fontSize: 11, letterSpacing: 1)),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            minimumSize: const Size(0, 0),
-          ),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          minimumSize: const Size(0, 0),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
+        child: Text(label, style: const TextStyle(fontSize: 10, letterSpacing: 0.5)),
       ),
     );
   }

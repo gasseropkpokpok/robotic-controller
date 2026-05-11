@@ -17,12 +17,12 @@ class RoboticSlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(4),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      margin: const EdgeInsets.all(2), // Minimal margin
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 2), // Very tight padding
       decoration: BoxDecoration(
-        color: const Color(0xFF0D0000),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.redAccent.withOpacity(0.25)),
+        color: const Color(0xFF0A0000),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.redAccent.withOpacity(0.2)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -35,9 +35,9 @@ class RoboticSlider extends StatelessWidget {
                 style: const TextStyle(
                   color: Colors.redAccent,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
+                  letterSpacing: 0.5,
                   fontFamily: 'Courier',
-                  fontSize: 11,
+                  fontSize: 10,
                 ),
               ),
               Text(
@@ -46,27 +46,32 @@ class RoboticSlider extends StatelessWidget {
                   color: Colors.white,
                   fontFamily: 'Courier',
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          // Compact Slider
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              trackHeight: 6,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+              trackHeight: 3, // Thinner track
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8), // Smaller thumb
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
               activeTrackColor: Colors.redAccent,
               inactiveTrackColor: Colors.red.withOpacity(0.1),
               thumbColor: Colors.white,
+              // Tighten the slider's internal vertical space
+              trackShape: const RectangularSliderTrackShape(),
             ),
-            child: Slider(
-              value: value,
-              min: -90,
-              max: 90,
-              divisions: 180,
-              onChanged: onChanged,
+            child: SizedBox(
+              height: 28, // Fix height to minimize vertical space
+              child: Slider(
+                value: value,
+                min: -90,
+                max: 90,
+                divisions: 180,
+                onChanged: onChanged,
+              ),
             ),
           ),
         ],
