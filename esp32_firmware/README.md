@@ -14,8 +14,15 @@ Arduino-compatible firmware for controlling robot joints using an ESP32 microcon
 
 1. Open `esp32_controller.ino` in the **Arduino IDE**.
 2. Install the **ArduinoJson** and **WebSockets** (by Markus Sattler) libraries.
-3. Update `ssid` and `password` with your WiFi credentials.
+3. Update `ap_ssid` and `ap_password` if desired (Default: `FirstTeamRobot` / `password123`).
 4. Select "ESP32 Dev Module" and flash to your device.
+
+## 📱 Connecting your Phone
+
+1. Open your phone's WiFi settings.
+2. Connect to **"FirstTeamRobot"** (Password: `password123`).
+3. Open the **First Team RC** app.
+4. It should automatically find the robot at `192.168.4.1`.
 
 ## 🔍 How it Works
 
