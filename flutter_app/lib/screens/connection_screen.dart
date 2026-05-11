@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +17,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   bool _isScanning = false;
   List<String> _foundDevices = [];
   Discovery? _discovery;
+  Timer? _scanTimer;
 
   @override
   void initState() {
@@ -36,25 +36,28 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     });
 
     try {
-      _discovery = await startDiscovery('_robotic-controller._tcp');
+      _discovery = await startDiscovery('_robotic-controller._tcp',
+          ipLookupType: IpLookupType.any);
+
       _discovery?.addListener(() {
+        if (!mounted) return;
         final services = _discovery?.services ?? [];
-        final ips = services
-            .map((s) => s.addresses?.isNotEmpty == true ? s.addresses!.first.address : s.host)
-            .whereType<String>()
-            .toList();
-
-        if (mounted) {
-          setState(() {
-            _foundDevices = ips;
-          });
+        final ips = <String>[];
+        for (final s in services) {
+          final addr = s.addresses?.isNotEmpty == true
+              ? s.addresses!.first.address
+              : null;
+          final host = s.host;
+          final ip = addr ?? host;
+          if (ip != null && !ips.contains(ip)) ips.add(ip);
         }
+        setState(() {
+          _foundDevices = ips;
+        });
       });
 
-      // Stop scanning after 10 seconds to save battery
-      Future.delayed(const Duration(seconds: 10), () {
-        _stopDiscovery();
-      });
+      // Auto-stop after 15 seconds to save battery
+      _scanTimer = Timer(const Duration(seconds: 15), _stopDiscovery);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -65,8 +68,12 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   }
 
   Future<void> _stopDiscovery() async {
+    _scanTimer?.cancel();
+    _scanTimer = null;
     if (_discovery != null) {
-      await stopDiscovery(_discovery!);
+      try {
+        await stopDiscovery(_discovery!);
+      } catch (_) {}
       _discovery = null;
     }
     if (mounted) {

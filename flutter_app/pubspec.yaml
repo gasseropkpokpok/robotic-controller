@@ -9,7 +9,7 @@ dependencies:
   provider: ^6.1.1
   web_socket_channel: ^2.4.0
   shared_preferences: ^2.2.2
-  nsd: ^1.2.3
+  nsd: ^5.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -17,7 +17,7 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: true
-  ios: true
+  ios: false
   image_path: "assets/logo.png"
 
 flutter:
