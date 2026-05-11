@@ -26,7 +26,7 @@ class RoboticApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Robotic Controller',
+      title: 'First Team RC',
       theme: AppTheme.darkRedTheme,
       debugShowCheckedModeBanner: false,
       home: const ControlScreen(),

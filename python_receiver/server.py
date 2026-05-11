@@ -3,6 +3,8 @@ import websockets
 import json
 import os
 import logging
+import socket
+from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
 logging.basicConfig(level=logging.INFO)
 
@@ -72,17 +74,52 @@ async def handler(websocket):
         print(f"\n[-] CONNECTION CLOSED: {client_ip}\n", flush=True)
         logging.info("Client disconnected")
 
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
 async def main():
     print("\n" + "*"*50, flush=True)
     print("      ROBOTIC CONTROLLER - SERVER STARTED       ", flush=True)
     print("*"*50 + "\n", flush=True)
     
+    # mDNS Registration
+    local_ip = get_local_ip()
+    port = 8765
+    desc = {'version': '1.0.0'}
+    
+    info = ServiceInfo(
+        "_robotic-controller._tcp.local.",
+        "Robotic Server._robotic-controller._tcp.local.",
+        addresses=[socket.inet_aton(local_ip)],
+        port=port,
+        properties=desc,
+        server="robotic-server.local.",
+    )
+
+    zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
+    print(f"[mDNS] Registering service robotic-controller on {local_ip}:{port}...", flush=True)
+    zeroconf.register_service(info)
+
     # Start the background reporter
     asyncio.create_task(status_reporter())
     
-    async with websockets.serve(handler, "0.0.0.0", 8765):
-        logging.info("Server bound to ws://0.0.0.0:8765")
-        await asyncio.Future()  # run forever
+    try:
+        async with websockets.serve(handler, "0.0.0.0", 8765):
+            logging.info(f"Server bound to ws://0.0.0.0:{port}")
+            await asyncio.Future()  # run forever
+    finally:
+        print(f"[mDNS] Unregistering service...", flush=True)
+        zeroconf.unregister_service(info)
+        zeroconf.close()
 
 if __name__ == "__main__":
     asyncio.run(main())

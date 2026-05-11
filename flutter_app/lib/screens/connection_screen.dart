@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:nsd/nsd.dart';
 import '../state/app_state.dart';
 
 class ConnectionScreen extends StatefulWidget {
@@ -16,50 +17,58 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   String _selectedDevice = 'PC';
   bool _isScanning = false;
   List<String> _foundDevices = [];
+  Discovery? _discovery;
 
   @override
   void initState() {
     super.initState();
     final appState = Provider.of<AppState>(context, listen: false);
     _ipController = TextEditingController(text: appState.targetIp);
-    _scanNetwork();
+    _startDiscovery();
   }
 
-  Future<void> _scanNetwork() async {
+  Future<void> _startDiscovery() async {
+    if (_isScanning) return;
+
     setState(() {
       _isScanning = true;
       _foundDevices = [];
     });
 
     try {
-      final interfaces = await NetworkInterface.list(type: InternetAddressType.IPv4);
-      for (var interface in interfaces) {
-        for (var address in interface.addresses) {
-          final ip = address.address;
-          if (ip.startsWith('127.')) continue;
+      _discovery = await startDiscovery('_robotic-controller._tcp');
+      _discovery?.addListener(() {
+        final services = _discovery?.services ?? [];
+        final ips = services
+            .map((s) => s.addresses?.isNotEmpty == true ? s.addresses!.first.address : s.host)
+            .whereType<String>()
+            .toList();
 
-          final parts = ip.split('.');
-          if (parts.length != 4) continue;
-          final subnet = '${parts[0]}.${parts[1]}.${parts[2]}';
-
-          // Scan a subset of IPs quickly (e.g. 1 to 254)
-          // We limit concurrency to avoid socket exhaustion
-          final futures = <Future>[];
-          for (int i = 1; i <= 254; i++) {
-            final targetIp = '$subnet.$i';
-            futures.add(_checkPort(targetIp, 8765));
-            if (futures.length >= 50) {
-               await Future.wait(futures);
-               futures.clear();
-            }
-          }
-          if (futures.isNotEmpty) await Future.wait(futures);
+        if (mounted) {
+          setState(() {
+            _foundDevices = ips;
+          });
         }
-      }
-    } catch (e) {
-      // Ignore network errors
-    }
+      });
 
+      // Stop scanning after 10 seconds to save battery
+      Future.delayed(const Duration(seconds: 10), () {
+        _stopDiscovery();
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _stopDiscovery() async {
+    if (_discovery != null) {
+      await stopDiscovery(_discovery!);
+      _discovery = null;
+    }
     if (mounted) {
       setState(() {
         _isScanning = false;
@@ -67,22 +76,9 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     }
   }
 
-  Future<void> _checkPort(String ip, int port) async {
-    try {
-      final socket = await Socket.connect(ip, port, timeout: const Duration(milliseconds: 300));
-      socket.destroy();
-      if (mounted && !_foundDevices.contains(ip)) {
-        setState(() {
-          _foundDevices.add(ip);
-        });
-      }
-    } catch (_) {
-      // Port closed or timeout
-    }
-  }
-
   @override
   void dispose() {
+    _stopDiscovery();
     _ipController.dispose();
     super.dispose();
   }
@@ -255,7 +251,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                             else
                               IconButton(
                                 icon: const Icon(Icons.refresh, color: Colors.redAccent, size: 20),
-                                onPressed: _scanNetwork,
+                                onPressed: _startDiscovery,
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                               ),
