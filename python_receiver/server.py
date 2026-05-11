@@ -4,14 +4,14 @@ import json
 import os
 import logging
 import socket
-from zeroconf import IPVersion, ServiceInfo
-from zeroconf.asyncio import AsyncZeroconf
 
 logging.basicConfig(level=logging.INFO)
 
 CACHE_DIR = "cache"
 CACHE_FILE = os.path.join(CACHE_DIR, "commands.json")
 MAX_CACHE_SIZE = 100
+WS_PORT = 8765
+UDP_BROADCAST_PORT = 8766   # Phone listens here for discovery beacons
 
 if not os.path.exists(CACHE_DIR):
     os.makedirs(CACHE_DIR)
@@ -29,28 +29,50 @@ def add_to_cache(command):
         commands_cache.pop(0)
     save_cache()
 
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
 async def status_reporter():
     while True:
         if connected_clients == 0:
-            print(f"[STATUS] Server is available and waiting for connections... (0 connected)", flush=True)
+            print(f"[STATUS] Waiting for connections... (0 connected)", flush=True)
         await asyncio.sleep(5)
+
+async def udp_broadcaster(local_ip: str):
+    """Sends a UDP broadcast every 2 seconds so phones can find the server."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.setblocking(False)
+    payload = f"ROBOT_CTRL:{local_ip}:{WS_PORT}".encode()
+    loop = asyncio.get_event_loop()
+    print(f"[UDP]  Broadcasting discovery beacon on port {UDP_BROADCAST_PORT}...", flush=True)
+    while True:
+        try:
+            await loop.sock_sendto(sock, payload, ('255.255.255.255', UDP_BROADCAST_PORT))
+        except Exception:
+            pass
+        await asyncio.sleep(2)
 
 async def handler(websocket):
     global connected_clients
     connected_clients += 1
     
     try:
-        if hasattr(websocket, 'remote_address') and websocket.remote_address:
-            client_ip = websocket.remote_address[0] if isinstance(websocket.remote_address, tuple) else str(websocket.remote_address)
-        else:
-            client_ip = "Unknown"
+        client_ip = websocket.remote_address[0] if isinstance(websocket.remote_address, tuple) else "Unknown"
     except Exception:
         client_ip = "Unknown"
         
-    print(f"\n==================================================", flush=True)
-    print(f"[SUCCESS] NEW CONNECTION ESTABLISHED: {client_ip}", flush=True)
-    print(f"==================================================\n", flush=True)
-    logging.info(f"Client connected: {client_ip}")
+    print(f"\n{'='*50}", flush=True)
+    print(f"[CONNECTED] {client_ip}", flush=True)
+    print(f"{'='*50}\n", flush=True)
     
     try:
         async for message in websocket:
@@ -71,55 +93,23 @@ async def handler(websocket):
         pass
     finally:
         connected_clients -= 1
-        print(f"\n[-] CONNECTION CLOSED: {client_ip}\n", flush=True)
-        logging.info("Client disconnected")
-
-def get_local_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(('10.255.255.255', 1))
-        IP = s.getsockname()[0]
-    except Exception:
-        IP = '127.0.0.1'
-    finally:
-        s.close()
-    return IP
+        print(f"\n[DISCONNECTED] {client_ip}\n", flush=True)
 
 async def main():
     print("\n" + "*"*50, flush=True)
     print("      ROBOTIC CONTROLLER - SERVER STARTED       ", flush=True)
     print("*"*50 + "\n", flush=True)
     
-    # mDNS Registration using AsyncZeroconf (works inside asyncio.run)
     local_ip = get_local_ip()
-    port = 8765
-    desc = {'version': '1.0.0'}
-    
-    info = ServiceInfo(
-        "_robotic-rc._tcp.local.",
-        "Robotic Server._robotic-rc._tcp.local.",
-        addresses=[socket.inet_aton(local_ip)],
-        port=port,
-        properties=desc,
-        server="robotic-server.local.",
-    )
+    print(f"[INFO] Server IP: {local_ip}", flush=True)
+    print(f"[INFO] WebSocket:  ws://{local_ip}:{WS_PORT}", flush=True)
+    print(f"[INFO] Discovery:  UDP broadcast on port {UDP_BROADCAST_PORT}\n", flush=True)
 
-    aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
-    print(f"[mDNS] Registering service robotic-controller on {local_ip}:{port}...", flush=True)
-    await aiozc.async_register_service(info)
-    print(f"[mDNS] Service registered! Phone should discover this server automatically.", flush=True)
-
-    # Start the background reporter
     asyncio.create_task(status_reporter())
+    asyncio.create_task(udp_broadcaster(local_ip))
     
-    try:
-        async with websockets.serve(handler, "0.0.0.0", port):
-            logging.info(f"Server bound to ws://0.0.0.0:{port}")
-            await asyncio.Future()  # run forever
-    finally:
-        print(f"[mDNS] Unregistering service...", flush=True)
-        await aiozc.async_unregister_service(info)
-        await aiozc.async_close()
+    async with websockets.serve(handler, "0.0.0.0", WS_PORT):
+        await asyncio.Future()  # run forever
 
 if __name__ == "__main__":
     asyncio.run(main())

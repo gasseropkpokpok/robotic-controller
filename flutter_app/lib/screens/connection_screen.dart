@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:nsd/nsd.dart';
 import '../state/app_state.dart';
 
 class ConnectionScreen extends StatefulWidget {
@@ -16,7 +16,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   String _selectedDevice = 'PC';
   bool _isScanning = false;
   List<String> _foundDevices = [];
-  Discovery? _discovery;
+  RawDatagramSocket? _udpSocket;
   Timer? _scanTimer;
 
   @override
@@ -36,29 +36,36 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     });
 
     try {
-      _discovery = await startDiscovery('_robotic-rc._tcp',
-          ipLookupType: IpLookupType.any);
-
-      _discovery?.addListener(() {
-        if (!mounted) return;
-        final services = _discovery?.services ?? [];
-        final ips = <String>[];
-        for (final s in services) {
-          final addr = s.addresses?.isNotEmpty == true
-              ? s.addresses!.first.address
-              : null;
-          final host = s.host;
-          final ip = addr ?? host;
-          if (ip != null && !ips.contains(ip)) ips.add(ip);
+      // Bind to the broadcast port (8766)
+      _udpSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 8766);
+      _udpSocket?.broadcastEnabled = true;
+      
+      _udpSocket?.listen((RawSocketEvent event) {
+        if (event == RawSocketEvent.read) {
+          Datagram? dg = _udpSocket?.receive();
+          if (dg != null) {
+            final message = String.fromCharCodes(dg.data);
+            // Payload format: "ROBOT_CTRL:IP:PORT"
+            if (message.startsWith('ROBOT_CTRL:')) {
+              final parts = message.split(':');
+              if (parts.length >= 2) {
+                final ip = parts[1];
+                if (!mounted) return;
+                if (!_foundDevices.contains(ip)) {
+                  setState(() {
+                    _foundDevices.add(ip);
+                  });
+                }
+              }
+            }
+          }
         }
-        setState(() {
-          _foundDevices = ips;
-        });
       });
 
-      // Auto-stop after 15 seconds to save battery
+      // Stop scanning after 15 seconds to save battery/resources
       _scanTimer = Timer(const Duration(seconds: 15), _stopDiscovery);
     } catch (e) {
+      debugPrint('UDP Discovery Error: $e');
       if (mounted) {
         setState(() {
           _isScanning = false;
@@ -70,12 +77,8 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   Future<void> _stopDiscovery() async {
     _scanTimer?.cancel();
     _scanTimer = null;
-    if (_discovery != null) {
-      try {
-        await stopDiscovery(_discovery!);
-      } catch (_) {}
-      _discovery = null;
-    }
+    _udpSocket?.close();
+    _udpSocket = null;
     if (mounted) {
       setState(() {
         _isScanning = false;
