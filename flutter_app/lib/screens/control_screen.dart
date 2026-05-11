@@ -84,7 +84,7 @@ class _ControlScreenState extends State<ControlScreen> {
                       crossAxisCount: 2,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      childAspectRatio: 2.8, // Even flatter to save more space
+                      childAspectRatio: 3.5, // Matches the new ultra-thin 18px sliders
                       children: List.generate(4, (index) {
                         final joint = _joints[index];
                         return RoboticSlider(
