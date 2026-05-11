@@ -36,7 +36,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     });
 
     try {
-      _discovery = await startDiscovery('_robotic-controller._tcp',
+      _discovery = await startDiscovery('_robotic-rc._tcp',
           ipLookupType: IpLookupType.any);
 
       _discovery?.addListener(() {

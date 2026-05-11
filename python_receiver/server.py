@@ -97,8 +97,8 @@ async def main():
     desc = {'version': '1.0.0'}
     
     info = ServiceInfo(
-        "_robotic-controller._tcp.local.",
-        "Robotic Server._robotic-controller._tcp.local.",
+        "_robotic-rc._tcp.local.",
+        "Robotic Server._robotic-rc._tcp.local.",
         addresses=[socket.inet_aton(local_ip)],
         port=port,
         properties=desc,
