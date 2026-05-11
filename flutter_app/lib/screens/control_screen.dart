@@ -28,155 +28,147 @@ class _ControlScreenState extends State<ControlScreen> {
     final appState = context.watch<AppState>();
 
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Prevent keyboard from pushing everything up
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        toolbarHeight: 50,
         title: Row(
           children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: appState.isConnected ? Colors.greenAccent : Colors.red,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: appState.isConnected ? Colors.greenAccent : Colors.red,
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              appState.isConnected
-                  ? 'UPLINK: ${appState.deviceType.toUpperCase()} [${appState.targetIp}]'
-                  : 'OFFLINE - NO UPLINK',
-              style: const TextStyle(
-                fontSize: 12,
-                letterSpacing: 1.2,
-                fontFamily: 'Courier',
-                fontWeight: FontWeight.bold,
+            _ConnectionStatusIndicator(isConnected: appState.isConnected),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                appState.isConnected
+                    ? 'UPLINK: ${appState.deviceType.toUpperCase()} [${appState.targetIp}]'
+                    : 'OFFLINE - NO UPLINK',
+                style: const TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 1,
+                  fontFamily: 'Courier',
+                  fontWeight: FontWeight.bold,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           ],
         ),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12, top: 6, bottom: 6),
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+          IconButton(
+            icon: Icon(
+              appState.isConnected ? Icons.settings_ethernet : Icons.wifi,
+              color: Colors.redAccent,
+              size: 20,
             ),
-            child: TextButton.icon(
-              icon: Icon(
-                appState.isConnected ? Icons.settings_ethernet : Icons.wifi,
-                color: Colors.redAccent,
-                size: 18,
-              ),
-              label: Text(
-                appState.isConnected ? 'MANAGE' : 'CONNECT',
-                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ConnectionScreen()),
-                );
-              },
-            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ConnectionScreen()),
+              );
+            },
           ),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Sliders panel — No scrollbar, fits all 5 sliders
+            // Scrollable Content Area for Sliders
             Expanded(
-              child: Container(
-                margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.redAccent.withOpacity(0.15)),
-                ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly, // This distributes sliders perfectly
-                  children: List.generate(_joints.length, (index) {
-                    final joint = _joints[index];
-                    return RoboticSlider(
-                      id: index + 1,
-                      label: _labels[index],
-                      value: appState.sliderValues[joint]!.toDouble(),
-                      onChanged: (v) => appState.updateSlider(joint, v.round()),
-                    );
-                  }),
+                  children: [
+                    // Grid for first 4 sliders (2x2)
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: 1.6, // Adjust based on phone width
+                      children: List.generate(4, (index) {
+                        final joint = _joints[index];
+                        return RoboticSlider(
+                          id: index + 1,
+                          label: _labels[index],
+                          value: appState.sliderValues[joint]!.toDouble(),
+                          onChanged: (v) => appState.updateSlider(joint, v.round()),
+                        );
+                      }),
+                    ),
+                    // 5th slider (Full width below)
+                    RoboticSlider(
+                      id: 5,
+                      label: _labels[4],
+                      value: appState.sliderValues[_joints[4]]!.toDouble(),
+                      onChanged: (v) => appState.updateSlider(_joints[4], v.round()),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                 ),
               ),
             ),
-            // Command bar
+            
+            // Fixed Bottom Command Bar
             Container(
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.35)),
-                boxShadow: [
-                  BoxShadow(color: Colors.redAccent.withOpacity(0.04), blurRadius: 8),
-                ],
+                border: Border(top: BorderSide(color: Colors.redAccent.withOpacity(0.2))),
               ),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _textController,
-                      style: const TextStyle(fontFamily: 'Courier', fontSize: 13),
-                      decoration: const InputDecoration(
-                        hintText: 'ENTER COMMAND...',
-                        prefixIcon: Icon(Icons.terminal, color: Colors.redAccent, size: 20),
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  // Text input row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _textController,
+                          style: const TextStyle(fontFamily: 'Courier', fontSize: 13),
+                          decoration: const InputDecoration(
+                            hintText: 'COMMAND...',
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                          ),
+                          onSubmitted: (v) {
+                            if (v.isNotEmpty) {
+                              appState.sendCommand(v.trim());
+                              _textController.clear();
+                            }
+                          },
+                        ),
                       ),
-                      onSubmitted: (v) {
-                        if (v.isNotEmpty) {
-                          appState.sendCommand(v.trim());
-                          _textController.clear();
-                        }
-                      },
-                    ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        onPressed: () {
+                          if (_textController.text.isNotEmpty) {
+                            appState.sendCommand(_textController.text.trim());
+                            _textController.clear();
+                          }
+                        },
+                        icon: const Icon(Icons.send, size: 20),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          padding: const EdgeInsets.all(8),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_textController.text.isNotEmpty) {
-                        appState.sendCommand(_textController.text.trim());
-                        _textController.clear();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      minimumSize: const Size(0, 0),
-                    ),
-                    child: const Icon(Icons.send, size: 20),
-                  ),
-                  const SizedBox(width: 16),
-                  Container(width: 1, height: 32, color: Colors.redAccent.withOpacity(0.2)),
-                  const SizedBox(width: 16),
-                  _CompactCommandButton(
-                    label: 'SET',
-                    icon: Icons.check_circle_outline,
-                    onPressed: () => appState.sendCommand('set'),
-                  ),
-                  const SizedBox(width: 8),
-                  _CompactCommandButton(
-                    label: 'OP1',
-                    icon: Icons.person_outline,
-                    onPressed: () => appState.sendCommand('user one'),
+                  const SizedBox(height: 8),
+                  // Quick Action Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _QuickButton(
+                        label: 'SET',
+                        icon: Icons.check_circle_outline,
+                        onPressed: () => appState.sendCommand('set'),
+                      ),
+                      _QuickButton(
+                        label: 'USER ONE',
+                        icon: Icons.person_outline,
+                        onPressed: () => appState.sendCommand('user one'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -188,12 +180,36 @@ class _ControlScreenState extends State<ControlScreen> {
   }
 }
 
-class _CompactCommandButton extends StatelessWidget {
+class _ConnectionStatusIndicator extends StatelessWidget {
+  final bool isConnected;
+  const _ConnectionStatusIndicator({required this.isConnected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: isConnected ? Colors.greenAccent : Colors.red,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: isConnected ? Colors.greenAccent : Colors.red,
+            blurRadius: 6,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback onPressed;
 
-  const _CompactCommandButton({
+  const _QuickButton({
     required this.label,
     required this.icon,
     required this.onPressed,
@@ -201,13 +217,18 @@ class _CompactCommandButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 16),
-      label: Text(label, style: const TextStyle(letterSpacing: 1, fontSize: 12)),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        minimumSize: const Size(0, 0),
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: ElevatedButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 14),
+          label: Text(label, style: const TextStyle(fontSize: 11, letterSpacing: 1)),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            minimumSize: const Size(0, 0),
+          ),
+        ),
       ),
     );
   }
